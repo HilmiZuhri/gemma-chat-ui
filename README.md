@@ -1,75 +1,201 @@
-# React + TypeScript + Vite
+# Gemma Chat
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern AI chat web application powered by **Google Gemma 3 1B**, featuring a React and TypeScript frontend connected to a FastAPI backend running on Google Colab.
 
-Currently, two official plugins are available:
+Gemma Chat provides a simple conversational interface for interacting with an open-weight language model through a custom API.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Features
 
-## React Compiler
+- **AI-powered conversations** using Google Gemma 3 1B Instruction-Tuned.
+- **Modern dark UI** with a responsive layout.
+- **Real-time request handling** with loading indicators and error messages.
+- **Conversation history** maintained during the current chat session.
+- **Quick prompts** to help users start a conversation.
+- **REST API integration** using FastAPI.
+- **Interactive API documentation** through Swagger UI.
+- **GPU-accelerated inference** using Google Colab.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tech Stack
 
-## Expanding the ESLint configuration
+### Frontend
+- React
+- TypeScript
+- Vite
+- CSS
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Backend and AI
+- Python
+- FastAPI
+- Uvicorn
+- Hugging Face Transformers
+- Google Gemma 3 1B (`google/gemma-3-1b-it`)
+- PyTorch
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Development Environment
+- Google Colab with NVIDIA Tesla T4 GPU
+- Ngrok for temporary public API access
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Architecture
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```text
+┌──────────────────────────┐
+│  React + TypeScript UI   │
+│  Local Development       │
+└────────────┬─────────────┘
+             │ HTTP / JSON
+             ▼
+┌──────────────────────────┐
+│       Ngrok Tunnel       │
+│   Temporary HTTPS URL    │
+└────────────┬─────────────┘
+             │
+             ▼
+┌──────────────────────────┐
+│       FastAPI Server     │
+│  GET  /                  │
+│  POST /chat              │
+│  POST /reset             │
+└────────────┬─────────────┘
+             │
+             ▼
+┌──────────────────────────┐
+│      Google Colab        │
+│    Gemma 3 1B + GPU      │
+└──────────────────────────┘
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+## Getting Started
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Prerequisites
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- Node.js and npm
+- Python environment in Google Colab
+- A Hugging Face account with access to the Gemma model
+- An Ngrok account and authtoken for public API access
 
+### 1. Set Up the AI Backend
+
+Open Google Colab and enable a GPU runtime.
+
+Install the required packages:
+
+```python
+%pip install -U "transformers>=5.10.1" accelerate sentencepiece huggingface_hub
+%pip install -q fastapi uvicorn pyngrok
 ```
+
+Authenticate with Hugging Face if required, then load the model:
+
+```python
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
+
+MODEL_ID = "google/gemma-3-1b-it"
+
+tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+
+model = AutoModelForCausalLM.from_pretrained(
+    MODEL_ID,
+    torch_dtype=torch.float16,
+    device_map="auto",
+).eval()
+```
+
+Follow the backend setup instructions to define the FastAPI application, configure CORS, and start the Uvicorn server.
+
+Configure Ngrok to expose port `8000` and obtain the public HTTPS URL.
+
+### 2. Set Up the Frontend
+
+Clone the repository and navigate to the project directory:
+
+```bash
+git clone <YOUR_REPOSITORY_URL>
+cd gemma-chat-ui
+npm install
+```
+
+Create a `.env.local` file in the project root:
+
+```dotenv
+VITE_API_URL=https://YOUR-NGROK-URL
+```
+
+Replace the placeholder with your active Ngrok URL. Do not add a trailing slash.
+
+### 3. Run the Frontend
+
+Start the Vite development server:
+
+```bash
+npm run dev
+```
+
+Open the local URL displayed in your terminal, typically:
+
+```text
+http://localhost:5173
+```
+
+Ensure that the Colab runtime, FastAPI server, and Ngrok tunnel are running before sending messages.
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/` | Check API status |
+| `POST` | `/chat` | Generate an AI response |
+| `POST` | `/reset` | Clear the server-side conversation history |
+| `GET` | `/docs` | Open interactive API documentation |
+
+### Example Request
+
+```http
+POST /chat
+Content-Type: application/json
+```
+
+```json
+{
+  "message": "Explain what an API is in simple terms.",
+  "max_new_tokens": 256
+}
+```
+
+### Example Response
+
+```json
+{
+  "reply": "An API is a way for different software applications to communicate with each other."
+}
+```
+
+The actual response content is generated by the model and may vary.
+
+## Current Limitations
+
+- **Temporary hosting:** Google Colab and Ngrok are used for experimentation, so the backend is not continuously available.
+- **Session management:** The current backend uses shared, in-memory conversation history and is intended for single-user testing.
+- **Model limitations:** Gemma 3 1B may produce inaccurate information, inconsistent formatting, or less natural responses in some languages.
+- **No persistent storage:** Conversations are not saved in a database.
+- **No authentication:** The prototype does not implement application-level user authentication or API access controls.
+
+## Future Improvements
+
+- Implement isolated conversation sessions for multiple users.
+- Improve response formatting and Markdown rendering.
+- Add persistent chat history.
+- Improve error handling and connection status indicators.
+- Deploy the backend to a persistent hosting environment.
+- Add model settings and configurable generation parameters.
+- Implement authentication and rate limiting.
+
+## Disclaimer
+
+This project is an experimental AI chat application built for learning and development purposes. AI-generated responses may be inaccurate and should be verified when factual accuracy is important.
+
+Google Colab and Ngrok are used as temporary development infrastructure, not as a production hosting solution.
+
+## License
+
+Choose a license appropriate for your project before publishing or redistributing the source code. If you intend to use an open-source license, consider adding an MIT `LICENSE` file.
